@@ -144,7 +144,7 @@ void push_chat (tgl_peer_t *P) {
       lua_pushnumber (luaState, i);
       tgl_peer_id_t id = TGL_MK_USER (P->chat.user_list[i].user_id);
       push_peer (id, tgl_peer_get (TLS, id));
-        int inviter_id = P->chat.user_list[i].inviter_id;
+	  int inviter_id = P->chat.user_list[i].inviter_id;
        if (inviter_id) {
          lua_pushstring (luaState, "inviter");
          tgl_peer_id_t id = TGL_MK_USER (inviter_id);
@@ -300,7 +300,7 @@ void push_media (struct tgl_message_media *M) {
   case tgl_message_media_document_encr:
     lua_newtable (luaState);
     lua_add_string_field ("type", "document");
-    lua_add_string_field ("caption", M->document->caption);
+	lua_add_string_field ("caption", M->document->caption);
     break;
   case tgl_message_media_unsupported:
     lua_newtable (luaState);
@@ -696,6 +696,7 @@ enum lua_query_type {
   lq_load_video_thumb,
   lq_load_video,
   lq_chat_info,
+  lq_chat_upgrade,
   lq_channel_info,
   lq_user_info,
   lq_history,
@@ -725,13 +726,15 @@ enum lua_query_type {
   lq_extf,
   lq_import_chat_link,
   lq_export_chat_link,
+  lq_export_channel_link,
   lq_channel_invite_user,
   lq_channel_kick_user,
   lq_channel_get_admins,
   lq_channel_get_users,
+    lq_channel_set_about,
+  lq_channel_set_admin,
   lq_contact_search,
   lq_get_message
-
 };
 
 struct lua_query_extra {
@@ -1181,8 +1184,10 @@ void lua_contact_search_cb (struct tgl_state *TLSR, void *cb_extra, int success,
    }
  
    free (cb);
- }
-
+}
+ 
+ 
+ 
 #define LUA_STR_ARG(n) lua_ptr[n].str, strlen (lua_ptr[n].str)
 
 void lua_do_all (void) {
@@ -1221,7 +1226,7 @@ void lua_do_all (void) {
       tgl_do_rename_chat (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
-    case lq_rename_channel:
+	case lq_rename_channel:
       tgl_do_rename_channel (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
@@ -1253,7 +1258,7 @@ void lua_do_all (void) {
       tgl_do_set_chat_photo (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
-    case lq_channel_set_photo:
+	case lq_channel_set_photo:
       tgl_do_set_channel_photo (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].str, lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
@@ -1300,10 +1305,20 @@ void lua_do_all (void) {
       tgl_do_forward_media (TLS, lua_ptr[p + 1].peer_id, &lua_ptr[p + 2].msg_id, 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 3;
       break;
+	case lq_channel_set_admin:
+      tgl_do_channel_set_admin (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].peer_id, lua_ptr[p + 3].num, lua_empty_cb, lua_ptr[p].ptr);
+      p += 4;
+      break;
     case lq_chat_info:
       tgl_do_get_chat_info (TLS, lua_ptr[p + 1].peer_id, 0, lua_chat_cb, lua_ptr[p].ptr);
       p += 2;
       break;
+	  
+	 case lq_chat_upgrade:
+      tgl_do_upgrade_group (TLS, lua_ptr[p + 1].peer_id, lua_empty_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
+	
     case lq_channel_info:
       tgl_do_get_channel_info (TLS, lua_ptr[p + 1].peer_id, 0, lua_channel_cb, lua_ptr[p].ptr);
       p += 2;
@@ -1396,6 +1411,10 @@ void lua_do_all (void) {
       tgl_do_export_chat_link (TLS, lua_ptr[p + 1].peer_id, lua_str_cb, lua_ptr[p].ptr);
       p += 2;
       break;
+	case lq_export_channel_link:
+      tgl_do_export_channel_link (TLS, lua_ptr[p + 1].peer_id, lua_str_cb, lua_ptr[p].ptr);
+      p += 2;
+      break;
     case lq_send_location:
       tgl_do_send_location (TLS, lua_ptr[p + 1].peer_id, lua_ptr[p + 2].dnum, lua_ptr[p + 3].dnum, 0, lua_msg_cb, lua_ptr[p].ptr);
       p += 4;
@@ -1412,17 +1431,21 @@ void lua_do_all (void) {
       tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 100, 0, 1, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
+	  case lq_contact_search:
+       tgl_do_contact_search (TLS, LUA_STR_ARG (p + 1), lua_contact_search_cb, lua_ptr[p].ptr);
+       p += 2;
+       break;
+     case lq_get_message:
+       tgl_do_get_message (TLS, &lua_ptr[p + 1].msg_id, lua_msg_cb, lua_ptr[p].ptr);
+       p += 2;
+       break;
+            case lq_channel_set_about:
+      tgl_do_channel_set_about (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
+      p += 3;
+    break;
     case lq_channel_get_users:
       tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 100, 0, 0, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
-      break;
-    case lq_contact_search:
-       tgl_do_contact_search (TLS, LUA_STR_ARG (p + 1), lua_contact_search_cb, lua_ptr[p].ptr);
-       p += 2;
-      break;
-    case lq_get_message:
-       tgl_do_get_message (TLS, &lua_ptr[p + 1].msg_id, lua_msg_cb, lua_ptr[p].ptr);
-       p += 2;
       break;
   /*
   lq_delete_msg,
@@ -1479,7 +1502,7 @@ struct lua_function functions[] = {
   {"get_contact_list", lq_contact_list, { lfp_none }},
   {"get_dialog_list", lq_dialog_list, { lfp_none }},
   {"rename_chat", lq_rename_chat, { lfp_chat, lfp_string, lfp_none }},
-  {"rename_channel", lq_rename_channel, { lfp_peer, lfp_string, lfp_none }},
+  {"rename_channel", lq_rename_channel, { lfp_channel, lfp_string, lfp_none }},
   {"send_msg", lq_msg, { lfp_peer, lfp_string, lfp_none }},
   {"post_msg", lq_msg_channel, { lfp_channel, lfp_string, lfp_none }},
   {"send_typing", lq_send_typing, { lfp_peer, lfp_none }},
@@ -1491,7 +1514,7 @@ struct lua_function functions[] = {
   {"send_file", lq_send_file, { lfp_peer, lfp_string, lfp_none }},
   {"send_text", lq_send_text, { lfp_peer, lfp_string, lfp_none }},
   {"chat_set_photo", lq_chat_set_photo, { lfp_chat, lfp_string, lfp_none }},
-  {"channel_set_photo", lq_channel_set_photo, { lfp_peer, lfp_string, lfp_none }},
+  {"channel_set_photo", lq_channel_set_photo, { lfp_channel, lfp_string, lfp_none }},
   {"load_photo", lq_load_photo, { lfp_msg, lfp_none }},
   {"load_video", lq_load_video, { lfp_msg, lfp_none }},
   {"load_video_thumb", lq_load_video_thumb, { lfp_msg, lfp_none }},
@@ -1527,12 +1550,16 @@ struct lua_function functions[] = {
   {"ext_function", lq_extf, { lfp_string, lfp_none }},
   {"import_chat_link", lq_import_chat_link, { lfp_string, lfp_none }},
   {"export_chat_link", lq_export_chat_link, { lfp_chat, lfp_none }},
+  {"export_channel_link", lq_export_channel_link, { lfp_channel, lfp_none }},
   {"channel_invite_user", lq_channel_invite_user, { lfp_channel, lfp_user, lfp_none }},
   {"channel_kick_user", lq_channel_kick_user, { lfp_channel, lfp_user, lfp_none }},
   {"channel_get_admins", lq_channel_get_admins, { lfp_channel, lfp_none }},
+  {"channel_set_admin", lq_channel_set_admin, { lfp_peer, lfp_user, lfp_nonnegative_number, lfp_none }},
   {"channel_get_users", lq_channel_get_users, { lfp_channel, lfp_none }},
-  {"resolve_username", lq_contact_search, { lfp_string, lfp_none }},
+  {"res_user", lq_contact_search, { lfp_string, lfp_none }},
+  {"channel_set_about", lq_channel_set_about, { lfp_channel, lfp_string, lfp_none }},
   {"get_message", lq_get_message, { lfp_msg, lfp_none }},
+  {"chat_upgrade", lq_chat_upgrade, { lfp_chat, lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
