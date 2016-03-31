@@ -734,7 +734,8 @@ enum lua_query_type {
   lq_channel_set_admin,
   lq_chat_upgrade,
   lq_channel_set_about,
-  lq_export_channel_link
+  lq_export_channel_link,
+  lq_get_super_list
 };
 
 struct lua_query_extra {
@@ -1443,6 +1444,9 @@ void lua_do_all (void) {
       tgl_do_channel_set_about (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), lua_empty_cb, lua_ptr[p].ptr);
       p += 3;
       break;
+      case lq_get_super_list:
+      tgl_do_get_channels_dialog_list (TLS, 100, 0, lua_dialog_list_cb, lua_ptr[p ++].ptr);
+      break;
   /*
   lq_delete_msg,
   lq_restore_msg,
@@ -1556,6 +1560,7 @@ struct lua_function functions[] = {
   {"channel_set_admin", lq_channel_set_admin, { lfp_peer, lfp_user, lfp_nonnegative_number, lfp_none }},
   {"channel_set_about", lq_channel_set_about, { lfp_channel, lfp_string, lfp_none }},
   {"chat_upgrade", lq_chat_upgrade, { lfp_chat, lfp_none }},
+  {"get_channel_list", lq_get_super_list, { lfp_none }},
   { 0, 0, { lfp_none}}
 };
 
