@@ -1202,7 +1202,7 @@ void lua_do_all (void) {
       tgl_do_update_contact_list (TLS, lua_contact_list_cb, lua_ptr[p ++].ptr);
       break;
     case lq_dialog_list:
-      tgl_do_get_dialog_list (TLS, 100, 0, lua_dialog_list_cb, lua_ptr[p ++].ptr);
+      tgl_do_get_dialog_list (TLS, 5000, 0, lua_dialog_list_cb, lua_ptr[p ++].ptr);
       break;
     case lq_msg:
       tgl_do_send_message (TLS, lua_ptr[p + 1].peer_id, LUA_STR_ARG (p + 2), 0, NULL, lua_msg_cb, lua_ptr[p].ptr);
@@ -1412,11 +1412,11 @@ void lua_do_all (void) {
       p += 3;
       break;
     case lq_channel_get_admins:
-      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 100, 0, 1, lua_contact_list_cb, lua_ptr[p].ptr);
+      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 5000, 0, 1, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_channel_get_users:
-      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 100, 0, 0, lua_contact_list_cb, lua_ptr[p].ptr);
+      tgl_do_channel_get_members (TLS, lua_ptr[p + 1].peer_id, 5000, 0, 0, lua_contact_list_cb, lua_ptr[p].ptr);
       p += 2;
       break;
     case lq_contact_search:
